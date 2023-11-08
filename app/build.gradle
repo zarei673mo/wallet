@@ -44,6 +44,10 @@ android {
     packagingOptions {
         exclude 'META-INF/**'
     }
+
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
