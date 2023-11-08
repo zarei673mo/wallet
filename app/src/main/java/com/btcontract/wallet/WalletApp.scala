@@ -7,7 +7,6 @@ import java.util.Date
 import akka.actor.Props
 import android.app.Application
 import android.content._
-import androidx.multidex.MultiDex
 import android.text.format.DateFormat
 import android.view.inputmethod.InputMethodManager
 import android.widget.{EditText, Toast}
@@ -49,7 +48,6 @@ object WalletApp {
   final val FIAT_CODE = "fiatCode"
   final val BTC_DENOM = "btcDenom"
   final val ENSURE_TOR = "ensureTor"
-  final val APP_OPENS_LEFT = "appOpensLeft"
   final val CUSTOM_ELECTRUM = "customElectrum"
 
   def fiatCode: String = app.prefs.getString(FIAT_CODE, "usd")
@@ -223,11 +221,6 @@ class WalletApp extends Application { me =>
     case true if tooFewSpace => new SimpleDateFormat("dd/MM/yy")
     case false => new SimpleDateFormat("MMM dd, yyyy")
     case true => new SimpleDateFormat("d MMM yyyy")
-  }
-
-  override def attachBaseContext(base: Context): Unit = {
-    super.attachBaseContext(base)
-    MultiDex.install(me)
   }
 
   override def onCreate: Unit = runAnd(super.onCreate) {
