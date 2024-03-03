@@ -2,9 +2,6 @@ package fr.acinq.eclair.blockchain.electrum
 
 import java.util.concurrent.ConcurrentHashMap
 
-import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
-import akka.pattern.ask
-import akka.util.Timeout
 import fr.acinq.bitcoin.DeterministicWallet._
 import fr.acinq.bitcoin._
 import fr.acinq.eclair.blockchain.electrum.Blockchain.RETARGETING_PERIOD
@@ -14,8 +11,8 @@ import fr.acinq.eclair.blockchain.electrum.db.sqlite.SqliteWalletDb.persistentDa
 import fr.acinq.eclair.blockchain.fee.FeeratePerKw
 import fr.acinq.eclair.{MilliSatoshi, addressToPublicKeyScript}
 import immortan.ConnectionProvider
-import immortan.crypto.CanBeShutDown
 import immortan.crypto.Tools._
+import immortan.crypto.{CanBeRepliedTo, CanBeShutDown}
 import immortan.sqlite.SQLiteTx
 import scodec.bits.ByteVector
 
@@ -43,8 +40,6 @@ object ElectrumWallet extends CanBeShutDown {
   val specs: mutable.Map[ExtendedPublicKey, WalletSpec] =
     new ConcurrentHashMap[ExtendedPublicKey, WalletSpec].asScala
 
-  implicit val timeout: Timeout = Timeout(1.minute)
-  implicit val system: ActorSystem = ActorSystem("immortan-actor-system")
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.Implicits.global
   def addressToPubKeyScript(address: String): ByteVector = Script write addressToPublicKeyScript(address, chainHash)
 
@@ -60,14 +55,13 @@ object ElectrumWallet extends CanBeShutDown {
   final val PARENTS_MISSING = 1
   final val FOREIGN_INPUTS = 2
 
-  sealed trait State
-  case object DISCONNECTED extends State
-  case object WAITING_FOR_TIP extends State
-  case object SYNCING extends State
-  case object RUNNING extends State
+  val DISCONNECTED = 1
+  val WAITING_FOR_TIP = 2
+  val SYNCING = 3
+  val RUNNING = 4
 
   sealed trait Request
-  case class ChainFor(target: ActorRef) extends Request
+  case class ChainFor(target: CanBeRepliedTo) extends Request
   case class SetExcludedOutPoints(outPoints: List[OutPoint] = Nil) extends Request
 
   sealed trait Response

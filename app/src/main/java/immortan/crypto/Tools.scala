@@ -7,9 +7,8 @@ import fr.acinq.bitcoin.Psbt.KeyPathWithMaster
 import fr.acinq.bitcoin._
 import fr.acinq.eclair.blockchain.electrum.ElectrumWallet.GenerateTxResponse
 import fr.acinq.eclair.blockchain.electrum.{ElectrumWallet, WalletSpec}
-import scodec.bits.ByteVector
-
 import scala.language.implicitConversions
+import scodec.bits.ByteVector
 
 
 object Tools {
@@ -20,9 +19,7 @@ object Tools {
   final val SEPARATOR = " "
 
   def trimmed(inputText: String): String = inputText.trim.take(144)
-
   def none: PartialFunction[Any, Unit] = { case _ => }
-
   def runAnd[T](result: T)(action: Any): T = result
 
   implicit class Any2Some[T](underlying: T) {
@@ -103,4 +100,34 @@ object Tools {
 
 trait CanBeShutDown {
   def becomeShutDown: Unit
+}
+
+trait CanBeRepliedTo {
+  def process(reply: Any): Unit
+}
+
+case object KillYourself
+
+object GlobalEventStream {
+  type CanBeReliedToSet = Set[CanBeRepliedTo]
+  var mappings: Map[String, CanBeReliedToSet] = Map.empty.withDefaultValue(Set.empty)
+  def unsubscribe(sink: CanBeRepliedTo, key: String): Unit = mappings(key) -= sink
+  def subscribe(sink: CanBeRepliedTo, key: String): Unit = mappings(key) += sink
+
+  def publish(event: Any): Unit =
+    mappings(event.getClass.getSimpleName)
+      .foreach(_ process event)
+}
+
+abstract class StateMachine[T] { me =>
+  def become(freshData: T, freshState: Int): StateMachine[T] = {
+    // Update state, data and return itself for easy chaining operations
+    state = freshState
+    data = freshData
+    me
+  }
+
+  def doProcess(change: Any): Unit
+  var state: Int = -1
+  var data: T = _
 }
